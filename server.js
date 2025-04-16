@@ -159,40 +159,41 @@ router.post('/signin', function (req, res) {
     } catch (error) {
         res.status(500).json({ message: "Internal Server Error", error });
     }
-    router.get('/movies/:id', authJwtController.isAuthenticated, async (req, res) => {
-        const movieId = req.params.id;
-        const includeReviews = req.query.reviews === 'true';
-    
-        if (!mongoose.Types.ObjectId.isValid(movieId)) {
-            return res.status(400).json({ message: 'Invalid movie ID' });
-        }
-    
-        try {
-            if (includeReviews) {
-                const result = await Movie.aggregate([
-                    { $match: { _id: new mongoose.Types.ObjectId(movieId) } },
-                    {
-                        $lookup: {
-                            from: 'reviews',
-                            localField: '_id',
-                            foreignField: 'movieId',
-                            as: 'reviews'
-                        }
+})
+
+router.get('/movies/:id', authJwtController.isAuthenticated, async (req, res) => {
+    const movieId = req.params.id;
+    const includeReviews = req.query.reviews === 'true';
+
+    if (!mongoose.Types.ObjectId.isValid(movieId)) {
+        return res.status(400).json({ message: 'Invalid movie ID' });
+    }
+
+    try {
+        if (includeReviews) {
+            const result = await Movie.aggregate([
+                { $match: { _id: new mongoose.Types.ObjectId(movieId) } },
+                {
+                    $lookup: {
+                        from: 'reviews',
+                        localField: '_id',
+                        foreignField: 'movieId',
+                        as: 'reviews'
                     }
-                ]);
-                if (result.length === 0) {
-                    return res.status(404).json({ message: 'Movie not found' });
                 }
-                return res.status(200).json(result[0]);
-            } else {
-                const movie = await Movie.findById(movieId);
-                if (!movie) return res.status(404).json({ message: 'Movie not found' });
-                return res.status(200).json(movie);
+            ]);
+            if (result.length === 0) {
+                return res.status(404).json({ message: 'Movie not found' });
             }
-        } catch (error) {
-            return res.status(500).json({ message: 'Internal Server Error', error });
+            return res.status(200).json(result[0]);
+        } else {
+            const movie = await Movie.findById(movieId);
+            if (!movie) return res.status(404).json({ message: 'Movie not found' });
+            return res.status(200).json(movie);
         }
-    });
+    } catch (error) {
+        return res.status(500).json({ message: 'Internal Server Error', error });
+    }
 });
 
 router.route('/Reviews')
