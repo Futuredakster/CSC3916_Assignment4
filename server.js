@@ -7,6 +7,7 @@ const cors = require('cors');
 const User = require('./Users');
 const Movie = require('./Movies');
 const Review = require('./Reviews') 
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 var app = express();
