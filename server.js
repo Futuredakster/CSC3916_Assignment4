@@ -156,17 +156,26 @@ router.route('/movies')
 // API Route: Movie Detail (with aggregated rating)
 router.get('/movies/:id', authJwtController.isAuthenticated, async (req, res) => {
     const movieId = req.params.id;
-    const aggregate = [
-        { $match: { _id: mongoose.Types.ObjectId(movieId) } },
-        { $lookup: { from: 'reviews', localField: '_id', foreignField: 'movieId', as: 'movieReviews' } },
-        { $addFields: { avgRating: { $avg: '$movieReviews.rating' } } }
-    ];
-    Movie.aggregate(aggregate).exec((err, movie) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!movie) return res.status(404).json({ message: 'Movie not found' });
-        res.status(200).json(movie[0]);
-    });
+    const includeReviews = req.query.reviews === 'true';
+
+    const pipeline = [{ $match: { _id: mongoose.Types.ObjectId(movieId) } }];
+
+    if (includeReviews) {
+        pipeline.push(
+            { $lookup: { from: 'reviews', localField: '_id', foreignField: 'movieId', as: 'movieReviews' } },
+            { $addFields: { avgRating: { $avg: '$movieReviews.rating' } } }
+        );
+    }
+
+    const result = await Movie.aggregate(pipeline);
+
+    if (!result || result.length === 0) {
+        return res.status(404).json({ message: 'Movie not found' });
+    }
+
+    res.status(200).json(result[0]);
 });
+
 
 // API Route: Reviews (GET, POST)
 router.route('/Reviews')
